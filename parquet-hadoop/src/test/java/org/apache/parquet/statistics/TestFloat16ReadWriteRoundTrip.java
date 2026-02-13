@@ -123,7 +123,7 @@ public class TestFloat16ReadWriteRoundTrip {
   }; // Infinity
 
   private Binary[] valuesAllPositiveZeroMinMax = {
-    Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x00}), // +0
+    Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x80}), // -0
     Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x00})
   }; // +0
 
