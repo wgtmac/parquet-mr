@@ -32,10 +32,8 @@ public class BinaryStatistics extends Statistics<Binary> {
 
   private final boolean isFloat16;
 
-  private static final Binary FLOAT16_POSITIVE_ZERO =
-      Binary.fromConstantByteArray(new byte[] {0x00, 0x00});
-  private static final Binary FLOAT16_NEGATIVE_ZERO =
-      Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
+  private static final Binary FLOAT16_POSITIVE_ZERO = Binary.fromConstantByteArray(new byte[] {0x00, 0x00});
+  private static final Binary FLOAT16_NEGATIVE_ZERO = Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
 
   private Binary max;
   private Binary min;
