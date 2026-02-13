@@ -121,7 +121,7 @@ public class TestByteBitPacking512VectorLE {
 
   private List<int[]> getRangeData(int bitWidth) {
     List<int[]> result = new ArrayList<>();
-    int itemMax = 1048576; // Reduced from 268435456 to 1M to avoid OOM
+    int itemMax = 268435456;
 
     long maxValue = getMaxValue(bitWidth);
     long maxValueFilled = maxValue + 1;
