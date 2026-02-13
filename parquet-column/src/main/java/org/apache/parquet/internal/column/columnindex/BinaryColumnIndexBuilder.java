@@ -124,7 +124,8 @@ class BinaryColumnIndexBuilder extends ColumnIndexBuilder {
           invalid = true;
         }
 
-        // Sorting order is undefined for -0.0 so let min = -0.0 and max = +0.0 to ensure that no 0.0 values are skipped
+        // Sorting order is undefined for -0.0 so let min = -0.0 and max = +0.0 to ensure that no 0.0 values are
+        // skipped
         // +0.0 is 0x0000, -0.0 is 0x8000 (little endian: 00 00, 00 80)
         if (sMin == (short) 0x0000) {
           bMin = Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
