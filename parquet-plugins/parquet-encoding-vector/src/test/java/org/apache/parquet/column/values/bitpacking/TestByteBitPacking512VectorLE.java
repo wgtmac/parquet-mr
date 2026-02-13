@@ -22,6 +22,8 @@ import static org.junit.Assert.assertArrayEquals;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -39,79 +41,31 @@ public class TestByteBitPacking512VectorLE {
   }
 
   private void unpackValuesUsingVectorBitWidth(int bitWidth) {
-    int itemMax = 1048576; // 1M values per chunk (4MB int array). Reduced from 256M (1GB) to avoid OOM.
+    List<int[]> intInputs = getRangeData(bitWidth);
 
-    long maxValue = getMaxValue(bitWidth);
-    long maxValueFilled = maxValue + 1;
-    long itemCount = (maxValueFilled / itemMax);
-    long mode = (maxValueFilled % itemMax);
-    if (mode != 0) {
-      ++itemCount;
-    }
+    for (int[] intInput : intInputs) {
+      int pack8Count = intInput.length / 8;
+      int byteOutputSize = pack8Count * bitWidth;
+      byte[] byteOutput = new byte[byteOutputSize];
+      int[] output1 = new int[intInput.length];
+      int[] output2 = new int[intInput.length];
+      int[] output3 = new int[intInput.length];
 
-    for (long i = 0; i < itemCount; i++) {
-      int len;
-      if ((i == itemCount - 1) && mode != 0) {
-        len = (int) mode;
-      } else {
-        len = itemMax;
-      }
-      if (len < 64) {
-        len = 64;
-      } else {
-        len += 64;
-      }
-      int[] intInput = new int[len];
-      int j = 0;
-      while (j < len) {
-        // Calculate absolute index to simulate the full range coverage
-        long absoluteIndex = j + i * itemMax;
-        // Cast to int to replicate original behavior (including overflow for bitWidth=32)
-        int value = (int) absoluteIndex;
-
-        // Use 'value' for check to match original logic (which allowed overflow for bitWidth=32)
-        if (value > maxValue) {
-          if (maxValue < Integer.MAX_VALUE) {
-            value = (int) maxValue;
-          } else {
-            value = Integer.MAX_VALUE;
-          }
-        }
-        if (value < 0) {
-          if (bitWidth < 32) {
-            value = value - Integer.MIN_VALUE;
-          }
-        }
-        intInput[j] = value;
-        j++;
+      BytePacker bytePacker = Packer.LITTLE_ENDIAN.newBytePacker(bitWidth);
+      for (int i = 0; i < pack8Count; i++) {
+        bytePacker.pack8Values(intInput, 8 * i, byteOutput, bitWidth * i);
       }
 
-      verifyBatch(bitWidth, intInput);
+      unpack8Values(bitWidth, byteOutput, output1);
+      unpackValuesUsingVectorArray(bitWidth, byteOutput, output2);
+
+      ByteBuffer byteBuffer = ByteBuffer.wrap(byteOutput);
+      unpackValuesUsingVectorByteBuffer(bitWidth, byteBuffer, output3);
+
+      assertArrayEquals(intInput, output1);
+      assertArrayEquals(intInput, output2);
+      assertArrayEquals(intInput, output3);
     }
-  }
-
-  private void verifyBatch(int bitWidth, int[] intInput) {
-    int pack8Count = intInput.length / 8;
-    int byteOutputSize = pack8Count * bitWidth;
-    byte[] byteOutput = new byte[byteOutputSize];
-    int[] output1 = new int[intInput.length];
-    int[] output2 = new int[intInput.length];
-    int[] output3 = new int[intInput.length];
-
-    BytePacker bytePacker = Packer.LITTLE_ENDIAN.newBytePacker(bitWidth);
-    for (int i = 0; i < pack8Count; i++) {
-      bytePacker.pack8Values(intInput, 8 * i, byteOutput, bitWidth * i);
-    }
-
-    unpack8Values(bitWidth, byteOutput, output1);
-    unpackValuesUsingVectorArray(bitWidth, byteOutput, output2);
-
-    ByteBuffer byteBuffer = ByteBuffer.wrap(byteOutput);
-    unpackValuesUsingVectorByteBuffer(bitWidth, byteBuffer, output3);
-
-    assertArrayEquals(intInput, output1);
-    assertArrayEquals(intInput, output2);
-    assertArrayEquals(intInput, output3);
   }
 
   public void unpack8Values(int bitWidth, byte[] input, int[] output) {
@@ -163,6 +117,54 @@ public class TestByteBitPacking512VectorLE {
     for (; byteIndex < totalByteCount; byteIndex += bitWidth, valueIndex += 8) {
       bytePacker.unpack8Values(input, byteIndex, output, valueIndex);
     }
+  }
+
+  private List<int[]> getRangeData(int bitWidth) {
+    List<int[]> result = new ArrayList<>();
+    int itemMax = 268435456;
+
+    long maxValue = getMaxValue(bitWidth);
+    long maxValueFilled = maxValue + 1;
+    int itemCount = (int) (maxValueFilled / itemMax);
+    int mode = (int) (maxValueFilled % itemMax);
+    if (mode != 0) {
+      ++itemCount;
+    }
+
+    for (int i = 0; i < itemCount; i++) {
+      int len;
+      if ((i == itemCount - 1) && mode != 0) {
+        len = mode;
+      } else {
+        len = itemMax;
+      }
+      if (len < 64) {
+        len = 64;
+      } else {
+        len += 64;
+      }
+      int[] array = new int[len];
+      int j = 0;
+      while (j < len) {
+        int value = j + i * itemMax;
+        if (value > maxValue) {
+          if (maxValue < Integer.MAX_VALUE) {
+            value = (int) maxValue;
+          } else {
+            value = Integer.MAX_VALUE;
+          }
+        }
+        if (value < 0) {
+          if (bitWidth < 32) {
+            value = value - Integer.MIN_VALUE;
+          }
+        }
+        array[j] = value;
+        j++;
+      }
+      result.add(array);
+    }
+    return result;
   }
 
   private long getMaxValue(int bitWidth) {
