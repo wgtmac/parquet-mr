@@ -129,13 +129,13 @@ public class TestFloat16ReadWriteRoundTrip {
 
   private Binary[] valuesAllNegativeZeroMinMax = {
     Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x80}), // -0
-    Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x80})
-  }; // -0
+    Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x00})
+  }; // +0
 
   private Binary[] valuesWithNaNMinMax = {
     Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0xc0}), // -2.0
-    Binary.fromConstantByteArray(new byte[] {(byte) 0x00, (byte) 0x7e})
-  }; // NaN
+    Binary.fromConstantByteArray(new byte[] {(byte) 0xff, (byte) 0x7b})
+  }; // 65504.0
 
   @Test
   public void testFloat16ColumnIndex() throws IOException {

@@ -19,6 +19,7 @@
 package org.apache.parquet.column.statistics;
 
 import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.schema.Float16;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Types;
@@ -30,6 +31,11 @@ public class BinaryStatistics extends Statistics<Binary> {
       Types.optional(PrimitiveType.PrimitiveTypeName.BINARY).named("fake_binary_type");
 
   private final boolean isFloat16;
+
+  private static final Binary FLOAT16_POSITIVE_ZERO =
+      Binary.fromConstantByteArray(new byte[] {0x00, 0x00});
+  private static final Binary FLOAT16_NEGATIVE_ZERO =
+      Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
 
   private Binary max;
   private Binary min;
@@ -58,6 +64,9 @@ public class BinaryStatistics extends Statistics<Binary> {
 
   @Override
   public void updateStats(Binary value) {
+    if (isFloat16 && value.length() == 2 && Float16.isNaN(value.get2BytesLittleEndian())) {
+      return;
+    }
     if (!this.hasNonNullValue()) {
       min = value.copy();
       max = value.copy();
@@ -74,10 +83,10 @@ public class BinaryStatistics extends Statistics<Binary> {
 
   private void normalize() {
     if (min.get2BytesLittleEndian() == (short) 0x0000) {
-      min = Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
+      min = FLOAT16_NEGATIVE_ZERO;
     }
     if (max.get2BytesLittleEndian() == (short) 0x8000) {
-      max = Binary.fromConstantByteArray(new byte[] {0x00, 0x00});
+      max = FLOAT16_POSITIVE_ZERO;
     }
   }
 
