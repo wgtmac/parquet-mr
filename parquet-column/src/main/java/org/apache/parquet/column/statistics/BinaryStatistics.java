@@ -19,6 +19,7 @@
 package org.apache.parquet.column.statistics;
 
 import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Types;
 
@@ -27,6 +28,8 @@ public class BinaryStatistics extends Statistics<Binary> {
   // A fake type object to be used to generate the proper comparator
   private static final PrimitiveType DEFAULT_FAKE_TYPE =
       Types.optional(PrimitiveType.PrimitiveTypeName.BINARY).named("fake_binary_type");
+
+  private final boolean isFloat16;
 
   private Binary max;
   private Binary min;
@@ -41,10 +44,12 @@ public class BinaryStatistics extends Statistics<Binary> {
 
   BinaryStatistics(PrimitiveType type) {
     super(type);
+    this.isFloat16 = type.getLogicalTypeAnnotation() instanceof LogicalTypeAnnotation.Float16LogicalTypeAnnotation;
   }
 
   private BinaryStatistics(BinaryStatistics other) {
     super(other.type());
+    this.isFloat16 = other.isFloat16;
     if (other.hasNonNullValue()) {
       initializeStats(other.min, other.max);
     }
@@ -62,6 +67,18 @@ public class BinaryStatistics extends Statistics<Binary> {
     } else if (comparator().compare(max, value) < 0) {
       max = value.copy();
     }
+    if (isFloat16) {
+      normalize();
+    }
+  }
+
+  private void normalize() {
+    if (min.get2BytesLittleEndian() == (short) 0x0000) {
+      min = Binary.fromConstantByteArray(new byte[] {0x00, (byte) 0x80});
+    }
+    if (max.get2BytesLittleEndian() == (short) 0x8000) {
+      max = Binary.fromConstantByteArray(new byte[] {0x00, 0x00});
+    }
   }
 
   @Override
@@ -71,6 +88,9 @@ public class BinaryStatistics extends Statistics<Binary> {
       initializeStats(binaryStats.getMin(), binaryStats.getMax());
     } else {
       updateStats(binaryStats.getMin(), binaryStats.getMax());
+    }
+    if (isFloat16) {
+      normalize();
     }
   }
 
@@ -86,6 +106,9 @@ public class BinaryStatistics extends Statistics<Binary> {
     max = Binary.fromReusedByteArray(maxBytes);
     min = Binary.fromReusedByteArray(minBytes);
     this.markAsNotEmpty();
+    if (isFloat16) {
+      normalize();
+    }
   }
 
   @Override
@@ -132,6 +155,9 @@ public class BinaryStatistics extends Statistics<Binary> {
     if (comparator().compare(max, max_value) < 0) {
       max = max_value.copy();
     }
+    if (isFloat16) {
+      normalize();
+    }
   }
 
   /**
@@ -144,6 +170,9 @@ public class BinaryStatistics extends Statistics<Binary> {
     min = min_value.copy();
     max = max_value.copy();
     this.markAsNotEmpty();
+    if (isFloat16) {
+      normalize();
+    }
   }
 
   @Override
@@ -184,6 +213,9 @@ public class BinaryStatistics extends Statistics<Binary> {
     this.max = max;
     this.min = min;
     this.markAsNotEmpty();
+    if (isFloat16) {
+      normalize();
+    }
   }
 
   @Override
