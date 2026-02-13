@@ -162,16 +162,17 @@ public abstract class Statistics<T extends Comparable<T>> {
         short max = bMax.get2BytesLittleEndian();
         // Drop min/max values in case of NaN as the sorting order of values is undefined for this case
         if (Float16.isNaN(min) || Float16.isNaN(max)) {
-          stats.setMinMax(POSITIVE_ZERO_LITTLE_ENDIAN, NEGATIVE_ZERO_LITTLE_ENDIAN);
+          stats.setMinMax(POSITIVE_ZERO_LITTLE_ENDIAN, POSITIVE_ZERO_LITTLE_ENDIAN);
           ((Statistics<?>) stats).hasNonNullValue = false;
         } else {
           // Updating min to -0.0 and max to +0.0 to ensure that no 0.0 values would be skipped
           if (min == (short) 0x0000) {
-            stats.setMinMax(NEGATIVE_ZERO_LITTLE_ENDIAN, bMax);
+            bMin = NEGATIVE_ZERO_LITTLE_ENDIAN;
           }
           if (max == (short) 0x8000) {
-            stats.setMinMax(bMin, POSITIVE_ZERO_LITTLE_ENDIAN);
+            bMax = POSITIVE_ZERO_LITTLE_ENDIAN;
           }
+          stats.setMinMax(bMin, bMax);
         }
       }
       return stats;
