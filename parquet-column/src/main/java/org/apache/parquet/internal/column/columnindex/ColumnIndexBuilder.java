@@ -802,8 +802,16 @@ public abstract class ColumnIndexBuilder {
     clearMinMax();
     nextPageIndex = 0;
     pageIndexes.clear();
-    repLevelHistogram.clear();
-    defLevelHistogram.clear();
+    if (repLevelHistogram != null) {
+      repLevelHistogram.clear();
+    } else {
+      repLevelHistogram = new LongArrayList();
+    }
+    if (defLevelHistogram != null) {
+      defLevelHistogram.clear();
+    } else {
+      defLevelHistogram = new LongArrayList();
+    }
   }
 
   abstract void clearMinMax();
